@@ -749,6 +749,21 @@ namespace SDG.Unturned
 		private float fuelBurnBuffer;
 
 		/// <summary>
+		/// Lure Bot (server only): set when the driver hops off a lure bot, cleared when someone takes the driver's
+		/// seat or the bot dies / runs out of power.
+		/// </summary>
+		private bool isLureArmed;
+		private float lureNoiseTimer;
+		private float lureFuelBurnBuffer;
+		private float lureBatteryBurnBuffer;
+		private static List<Zombie> lureZombiesInRadius = new List<Zombie>();
+
+		/// <summary>
+		/// Lure Bot autopilot acceleration (m/s^2) toward VehicleAsset.lureAutopilotSpeed.
+		/// </summary>
+		private const float LURE_AUTOPILOT_ACCELERATION = 2.0f;
+
+		/// <summary>
 		/// Rigidbody on the Vehicle prefab.
 		/// (not called "rigidbody" because as of 2024-02-28 the deprecated "rigidbody" property still exists)
 		/// </summary>
@@ -2285,6 +2300,9 @@ namespace SDG.Unturned
 			if (seatIndex == 0)
 			{
 				isEngineOn = (!usesBattery || HasBatteryWithCharge) && !isUnderwater;
+
+				// Taking the wheel of a lure bot switches it back to manual control.
+				SetLureArmed(false);
 			}
 
 			updateEngine();
@@ -2374,6 +2392,12 @@ namespace SDG.Unturned
 			if (seatIndex == 0)
 			{
 				isEngineOn = false;
+
+				// Driver hopped off a lure bot: it carries on by itself.
+				if (removedClient != null)
+				{
+					SetLureArmed(true);
+				}
 			}
 
 			updateEngine();
@@ -2506,11 +2530,17 @@ namespace SDG.Unturned
 			if (toSeatIndex == 0)
 			{
 				isEngineOn = (!usesBattery || HasBatteryWithCharge) && !isUnderwater;
+				SetLureArmed(false);
 			}
 
 			if (fromSeatIndex == 0)
 			{
 				isEngineOn = false;
+
+				if (swappedClient != null)
+				{
+					SetLureArmed(true);
+				}
 			}
 
 			updateEngine();
@@ -4190,6 +4220,13 @@ namespace SDG.Unturned
 				{
 					explode();
 				}
+
+				if (isLureArmed)
+				{
+					BeginSample("UpdateLureBot");
+					UpdateLureBot(deltaTime);
+					EndSample();
+				}
 			}
 
 			if (!Provider.isServer && !isPhysical)
@@ -4279,6 +4316,197 @@ namespace SDG.Unturned
 			{
 				ApplyAngularVelocityDamping(Time.fixedDeltaTime);
 			}
+
+			if (isLureArmed)
+			{
+				ApplyLureAutopilot(Time.fixedDeltaTime);
+			}
+		}
+
+		/// <summary>
+		/// True on the server while this lure bot is unmanned, alive and powered. While active it crawls forward,
+		/// pulses noise that pulls zombies, and drains fuel or battery. Zombies following it scatter as soon as this
+		/// becomes false.
+		/// </summary>
+		public bool IsLureActive => isLureArmed && !isDriven && !isDead && !isExploded && !isDrowned && HasLurePower;
+
+		/// <summary>
+		/// Mirrors the ignition rules: needs a charged battery if it uses one, and fuel if it uses fuel.
+		/// </summary>
+		private bool HasLurePower => (!usesBattery || HasBatteryWithCharge) && (!usesFuel || fuel > 0);
+
+		/// <summary>
+		/// Server-only. Arms the lure bot when the driver hops off and disarms it when someone takes the wheel.
+		/// No-op for vehicles that aren't lure bots.
+		/// </summary>
+		private void SetLureArmed(bool armed)
+		{
+			if (!Provider.isServer || asset == null || !asset.isLureBot)
+			{
+				return;
+			}
+
+			if (armed && (isDead || isExploded))
+			{
+				armed = false;
+			}
+
+			if (isLureArmed == armed)
+			{
+				return;
+			}
+
+			isLureArmed = armed;
+			lureFuelBurnBuffer = 0.0f;
+			lureBatteryBurnBuffer = 0.0f;
+
+			if (armed)
+			{
+				// Pulse right away so nearby zombies latch on the moment the driver hops off.
+				lureNoiseTimer = 0.0f;
+			}
+			else
+			{
+				StopLureAutopilot();
+			}
+		}
+
+		private void StopLureAutopilot()
+		{
+			// Put back the light parking brake that undriven vehicles normally hold (see Wheel.Reset).
+			if (!isDriven && _wheels != null)
+			{
+				foreach (Wheel wheel in _wheels)
+				{
+					wheel.Reset();
+				}
+			}
+
+			if (!isExploded)
+			{
+				// Burning was server-only, so bring clients' fuel and battery back in sync.
+				VehicleManager.sendVehicleFuel(this, fuel);
+				VehicleManager.sendVehicleBatteryCharge(this, batteryCharge);
+			}
+		}
+
+		private void UpdateLureBot(float deltaTime)
+		{
+			if (!IsLureActive)
+			{
+				// Died, drowned, ran out of power, or someone got in. Followers notice on their next tick and scatter.
+				SetLureArmed(false);
+				return;
+			}
+
+			BurnLurePower(deltaTime);
+
+			lureNoiseTimer -= deltaTime;
+			if (lureNoiseTimer <= 0.0f)
+			{
+				lureNoiseTimer = asset.lureNoiseInterval;
+				EmitLureNoise();
+			}
+		}
+
+		private void BurnLurePower(float deltaTime)
+		{
+			if (usesFuel)
+			{
+				lureFuelBurnBuffer += deltaTime * asset.fuelBurnRate;
+				ushort fuelBurnDelta = (ushort) Mathf.FloorToInt(lureFuelBurnBuffer);
+				if (fuelBurnDelta > 0)
+				{
+					lureFuelBurnBuffer -= fuelBurnDelta;
+					askBurnFuel(fuelBurnDelta);
+				}
+			}
+			else if (asset.isBatteryPowered)
+			{
+				lureBatteryBurnBuffer += deltaTime * asset.batteryBurnRate;
+				ushort batteryBurnDelta = (ushort) Mathf.FloorToInt(lureBatteryBurnBuffer);
+				if (batteryBurnDelta > 0)
+				{
+					lureBatteryBurnBuffer -= batteryBurnDelta;
+					askBurnBattery(batteryBurnDelta);
+				}
+			}
+		}
+
+		private void EmitLureNoise()
+		{
+			Vector3 position = transform.position;
+			float radius = asset.lureNoiseRadius;
+
+			lureZombiesInRadius.Clear();
+			ZombieManager.getZombiesInRadius(position, radius * radius, lureZombiesInRadius);
+			foreach (Zombie zombie in lureZombiesInRadius)
+			{
+				if (zombie != null && !zombie.isDead)
+				{
+					zombie.alertLure(this);
+				}
+			}
+			lureZombiesInRadius.Clear();
+
+			EffectAsset pulseEffect = asset.lurePulseEffect.Find();
+			if (pulseEffect != null)
+			{
+				TriggerEffectParameters effectParameters = new TriggerEffectParameters(pulseEffect);
+				effectParameters.position = position;
+				effectParameters.relevantDistance = EffectManager.MEDIUM;
+				EffectManager.triggerEffect(effectParameters);
+			}
+		}
+
+		/// <summary>
+		/// Server-side physics step for an unmanned lure bot: release the parking brake and push it forward along
+		/// whatever heading the driver left it on. It doesn't steer; walls and slopes are the player's problem.
+		/// </summary>
+		private void ApplyLureAutopilot(float deltaTime)
+		{
+			if (!IsLureActive || asset.lureAutopilotSpeed <= 0.0f)
+			{
+				return;
+			}
+
+			// On its side or upside down: stay put and keep making noise.
+			if (transform.up.y < 0.5f)
+			{
+				return;
+			}
+
+			bool anyWheelOnGround = false;
+			if (_wheels != null)
+			{
+				foreach (Wheel wheel in _wheels)
+				{
+					if (wheel.wheel == null)
+					{
+						continue;
+					}
+
+					wheel.wheel.brakeTorque = 0.0f;
+					wheel.UpdateGrounded();
+					anyWheelOnGround |= wheel.isGrounded;
+				}
+			}
+
+			if (!anyWheelOnGround)
+			{
+				return;
+			}
+
+			Vector3 forward = transform.forward;
+			float forwardSpeed = Vector3.Dot(rootRigidbody.velocity, forward);
+			float speedDeficit = asset.lureAutopilotSpeed - forwardSpeed;
+			if (speedDeficit <= 0.0f)
+			{
+				return;
+			}
+
+			float velocityChange = Mathf.Min(speedDeficit, LURE_AUTOPILOT_ACCELERATION * deltaTime);
+			rootRigidbody.AddForce(forward * velocityChange, ForceMode.VelocityChange);
 		}
 
 		private void UpdateHookedVehicleTransforms()

@@ -10,7 +10,11 @@ namespace SDG.Unturned
 	public enum EHuntType
 	{
 		PLAYER,
-		POINT
+		POINT,
+		/// <summary>
+		/// Following a moving lure bot vehicle (see VehicleAsset.lureNoiseRadius).
+		/// </summary>
+		LURE
 	}
 
 	/// <summary>
@@ -138,6 +142,28 @@ namespace SDG.Unturned
 		/// If zombie is stuck this was a nearby object potentially blocking our path.
 		/// </summary>
 		private InteractableObjectRubble targetObject;
+
+		/// <summary>
+		/// Lure bot this zombie is following while huntType is LURE.
+		/// </summary>
+		private InteractableVehicle lure;
+
+		/// <summary>
+		/// Last known position of the lure. If the lure is destroyed we scatter around here.
+		/// </summary>
+		private Vector3 lureLastPosition;
+
+		private float lureScatterRadius;
+
+		/// <summary>
+		/// Lured zombies trail this far (meters) behind the bot so they don't body-block it.
+		/// </summary>
+		private const float LURE_FOLLOW_DISTANCE = 4.0f;
+
+		/// <summary>
+		/// Lured zombies further than this from the bot walk straight at it instead of to their formation slot.
+		/// </summary>
+		private const float LURE_FORMATION_DISTANCE = 16.0f;
 
 		private Transform target;
 		private Animation animator;
@@ -1123,6 +1149,7 @@ namespace SDG.Unturned
 
 				isHunting = true;
 				huntType = EHuntType.PLAYER;
+				lure = null; // A real player beats a noisy drone.
 				isPulled = true;
 				lastPull = Time.time;
 
@@ -1301,6 +1328,124 @@ namespace SDG.Unturned
 			}
 		}
 
+		/// <summary>
+		/// Called by a lure bot's noise pulse (server only). Unlike alert(Vector3) the zombie keeps following the
+		/// moving bot instead of investigating a single point. Players take priority: a zombie already chasing a
+		/// player ignores the lure, and a lured zombie that notices a player switches to them (see alert(Player)).
+		/// </summary>
+		internal void alertLure(InteractableVehicle newLure)
+		{
+			if (isDead || newLure == null || newLure.asset == null)
+			{
+				return;
+			}
+
+			// Bosses stay in their arenas.
+			if (isBoss || speciality == EZombieSpeciality.BOSS_ALL)
+			{
+				return;
+			}
+
+			if (player != null)
+			{
+				return;
+			}
+
+			if (isHunting && huntType == EHuntType.LURE && lure != null)
+			{
+				if (lure == newLure)
+				{
+					return;
+				}
+
+				// Already following a different lure: only switch if the new one is closer.
+				float currentSqrDistance = (lure.transform.position - transform.position).sqrMagnitude;
+				float newSqrDistance = (newLure.transform.position - transform.position).sqrMagnitude;
+				if (newSqrDistance >= currentSqrDistance)
+				{
+					return;
+				}
+			}
+			else if (!isHunting)
+			{
+				// Startle and start hunting exactly like any other noise, then switch to following the bot below.
+				alert(newLure.transform.position, true);
+			}
+
+			if (isWandering)
+			{
+				isWandering = false;
+				ZombieManager.wanderingCount--;
+			}
+
+			isHunting = true;
+			huntType = EHuntType.LURE;
+			lure = newLure;
+			lureLastPosition = newLure.transform.position;
+			lureScatterRadius = newLure.asset.lureScatterRadius;
+
+			// If the zombie later loses the bot (outruns the leash) it eventually wanders home.
+			isPulled = true;
+			lastPull = Time.time;
+
+			isLeaving = false;
+			lastHunted = Time.time;
+
+			target.position = GetLureFollowPosition();
+			seeker.CanSearch = true;
+			seeker.CanMove = true;
+		}
+
+		/// <summary>
+		/// Point behind the lure bot for this zombie to walk to. Each zombie gets a fixed offset so followers form a
+		/// loose pack trailing the bot rather than all converging on (and blocking) it.
+		/// </summary>
+		private Vector3 GetLureFollowPosition()
+		{
+			Transform lureTransform = lure.transform;
+			Vector3 lurePosition = lureTransform.position;
+
+			// Head straight for the bot until close, then fall into formation. This also keeps the 64 m give-up
+			// distance measured against the bot itself, matching the 64 m cap on the noise radius.
+			if ((lurePosition - transform.position).sqrMagnitude > LURE_FORMATION_DISTANCE * LURE_FORMATION_DISTANCE)
+			{
+				return lurePosition;
+			}
+
+			Vector3 behind = -lureTransform.forward;
+			behind.y = 0.0f;
+			behind = behind.sqrMagnitude > 0.01f ? behind.normalized : Vector3.zero;
+
+			float angle = id * 2.39996f; // Golden angle (radians) spreads ids evenly around the bot.
+			float spread = 1.5f + (id % 4);
+			Vector3 offset = new Vector3(Mathf.Cos(angle), 0.0f, Mathf.Sin(angle)) * spread;
+
+			return lurePosition + (behind * LURE_FOLLOW_DISTANCE) + offset;
+		}
+
+		/// <summary>
+		/// The lure bot died, ran out of power or was taken over. Drop it and shamble off to a random point around
+		/// where it last was, and settle there instead of walking home: the horde ends up wherever the bot died.
+		/// </summary>
+		private void scatterFromLure()
+		{
+			Vector3 center = lureLastPosition;
+			float radius = lureScatterRadius;
+
+			stop(); // Also clears lure.
+
+			float angle = Random.value * Mathf.PI * 2.0f;
+			float distance = Random.Range(0.35f, 1.0f) * radius;
+			Vector3 scatterPoint = center + new Vector3(Mathf.Cos(angle) * distance, 0.0f, Mathf.Sin(angle) * distance);
+			if (!LevelNavigation.checkNavigation(scatterPoint))
+			{
+				scatterPoint = center;
+			}
+
+			cameFrom = scatterPoint;
+			alert(scatterPoint, true);
+		}
+
 		public void updateStates()
 		{
 			lastUpdatedPos = transform.position;
@@ -1331,6 +1476,7 @@ namespace SDG.Unturned
 			targetObstructionVehicle = null;
 			targetPassengerVehicle = null;
 			targetObject = null;
+			lure = null;
 			seeker.CanSearch = false;
 			seeker.CanMove = false;
 
@@ -1793,6 +1939,7 @@ namespace SDG.Unturned
 			targetObstructionVehicle = null;
 			targetPassengerVehicle = null;
 			targetObject = null;
+			lure = null;
 			seeker.CanSearch = false;
 			seeker.CanMove = false;
 
@@ -1932,9 +2079,23 @@ namespace SDG.Unturned
 				vehiclesInRadius.Clear();
 				VehicleManager.getVehiclesInRadius(transform.position, 16.0f, vehiclesInRadius);
 
-				if (vehiclesInRadius.Count > 0 && vehiclesInRadius[0].asset != null && vehiclesInRadius[0].asset.isVulnerableToEnvironment)
+				// Never "unstick" by mauling a lure bot: lured zombies crowd around it, and it's meant to die to
+				// players sniping it, not to its own followers.
+				InteractableVehicle obstructionVehicle = null;
+				foreach (InteractableVehicle testVehicle in vehiclesInRadius)
 				{
-					targetObstructionVehicle = vehiclesInRadius[0];
+					if (testVehicle != null && testVehicle.asset != null && testVehicle.asset.isLureBot)
+					{
+						continue;
+					}
+
+					obstructionVehicle = testVehicle;
+					break;
+				}
+
+				if (obstructionVehicle != null && obstructionVehicle.asset != null && obstructionVehicle.asset.isVulnerableToEnvironment)
+				{
+					targetObstructionVehicle = obstructionVehicle;
 					return;
 				}
 			}
@@ -2031,6 +2192,20 @@ namespace SDG.Unturned
 					stop();
 					return;
 				}
+			}
+			else if (huntType == EHuntType.LURE)
+			{
+				// Unity null check also catches a destroyed vehicle.
+				if (lure == null || !lure.IsLureActive)
+				{
+					scatterFromLure();
+					return;
+				}
+
+				// Keep following even after catching up: unlike POINT, reaching the target doesn't end the hunt.
+				// If the bot gets more than 64 m ahead the generic leash below makes us give up and leave.
+				lureLastPosition = lure.transform.position;
+				target.position = GetLureFollowPosition();
 			}
 
 			if (player != null)
