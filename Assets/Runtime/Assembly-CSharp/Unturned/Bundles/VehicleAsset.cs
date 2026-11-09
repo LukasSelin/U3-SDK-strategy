@@ -1342,6 +1342,59 @@ namespace SDG.Unturned
 			protected set;
 		}
 
+		/// <summary>
+		/// Lure Bot: if greater than zero this vehicle is a noise-making decoy. While the driver's seat is empty after
+		/// someone drove it (i.e. the driver hopped off), it crawls forward on its own and periodically pulls zombies
+		/// within this radius (meters, max 64) to follow it. When it dies or loses power, its followers scatter around
+		/// wherever it was. Configured by "Lure_Noise_Radius".
+		/// </summary>
+		public float lureNoiseRadius
+		{
+			get;
+			protected set;
+		}
+
+		public bool isLureBot => lureNoiseRadius > 0.0f;
+
+		/// <summary>
+		/// Seconds between lure noise pulses. Configured by "Lure_Noise_Interval".
+		/// </summary>
+		public float lureNoiseInterval
+		{
+			get;
+			protected set;
+		}
+
+		/// <summary>
+		/// Forward speed (m/s) the lure bot crawls at while unmanned. Zero makes it a stationary beacon.
+		/// Configured by "Lure_Autopilot_Speed".
+		/// </summary>
+		public float lureAutopilotSpeed
+		{
+			get;
+			protected set;
+		}
+
+		/// <summary>
+		/// Radius (meters) around the lure bot's last position that its followers scatter into when it dies.
+		/// Configured by "Lure_Scatter_Radius".
+		/// </summary>
+		public float lureScatterRadius
+		{
+			get;
+			protected set;
+		}
+
+		/// <summary>
+		/// Optional effect (e.g. a beep or siren sound) played at the lure bot every noise pulse.
+		/// Configured by "Lure_Pulse_Effect".
+		/// </summary>
+		public AssetReference<EffectAsset> lurePulseEffect
+		{
+			get;
+			protected set;
+		}
+
 		public bool isReclined
 		{
 			get;
@@ -2168,6 +2221,16 @@ namespace SDG.Unturned
 			// 12.5 / 6 = 2.083, 12.5 / 3 = 4.166
 			float defaultFuelBurnRate = engine == EEngine.CAR ? 2.05f : 4.2f;
 			fuelBurnRate = p.data.ParseFloat("Fuel_Burn_Rate", defaultValue: defaultFuelBurnRate);
+
+			// Capped at 64 m because zombies give up on any target further away than that (see Zombie.tick).
+			lureNoiseRadius = Mathf.Clamp(p.data.ParseFloat("Lure_Noise_Radius", defaultValue: 0.0f), 0.0f, 64.0f);
+			if (isLureBot)
+			{
+				lureNoiseInterval = Mathf.Max(0.1f, p.data.ParseFloat("Lure_Noise_Interval", defaultValue: 1.5f));
+				lureAutopilotSpeed = Mathf.Max(0.0f, p.data.ParseFloat("Lure_Autopilot_Speed", defaultValue: 3.0f));
+				lureScatterRadius = Mathf.Max(0.0f, p.data.ParseFloat("Lure_Scatter_Radius", defaultValue: 12.0f));
+				lurePulseEffect = p.data.ParseStruct<AssetReference<EffectAsset>>("Lure_Pulse_Effect");
+			}
 
 			_ignition = LoadRedirectableAsset<AudioClip>(p.bundle, "Ignition", p.data, "IgnitionAudioClip");
 
