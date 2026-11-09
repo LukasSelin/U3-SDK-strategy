@@ -1,0 +1,117 @@
+// Play test Lure Bot (see Docs/PlayTest.md and Docs/LureBot.md).
+// A slow, fragile, battery-powered Golfcart. It has no model of its own: the two lines below point it at the
+// vanilla Golfcart's files inside core.masterbundle, and the rest is a copy of Golfcart.dat with the tuning changed.
+GUID 6f0f4a54c1d94d0b9e6b7a1f4c2d8e31
+Type Vehicle
+Rarity Common
+ID 58800
+
+Master_Bundle_Override core.masterbundle
+Bundle_Override_Path /Vehicles/Golfcart
+
+// Lure Bot
+Lure_Noise_Radius 48
+Lure_Noise_Interval 1.5
+Lure_Autopilot_Speed 3
+Lure_Scatter_Radius 14
+
+// Slow
+Speed_Min -2
+Speed_Max 5
+
+Steer_Min 24
+Steer_Max 48
+
+Brake 32
+
+// Battery rather than fuel. A full battery (10000) lasts a bit over four minutes of luring.
+Battery_Powered
+BatteryMode_Driving Burn
+Battery_Burn_Rate 40
+
+Fuel_Min 100
+Fuel_Max 200
+Fuel 400
+
+// Fragile: a few rifle hits kill it.
+Health_Min 60
+Health_Max 60
+Health 60
+
+Explosion 20
+
+IgnitionAudioClip Sounds/CarIgnition.mp3
+HornAudioClip Sounds/CarHorn_04.mp3
+Has_Clip_Prefab false
+
+Carjack_Force_Multiplier 2
+Explosion_Force_Multiplier 2
+
+PaintableSections
+[
+	{
+		Path Model_0
+		MaterialIndex 0
+	}
+	{
+		Path Model_1
+		MaterialIndex 0
+	}
+]
+
+DefaultPaintColors
+[
+	#d43a2a
+]
+
+WheelConfigurations
+[
+	{
+		WheelColliderPath Tires/Tire_0
+		IsColliderSteered true
+		IsColliderPowered true
+		ModelPath Wheels/Wheel_0
+		ModelUseColliderPose true
+	}
+	{
+		WheelColliderPath Tires/Tire_1
+		IsColliderSteered true
+		IsColliderPowered true
+		ModelPath Wheels/Wheel_1
+		ModelUseColliderPose true
+	}
+	{
+		WheelColliderPath Tires/Tire_2
+		IsColliderSteered false
+		IsColliderPowered false
+		ModelPath Wheels/Wheel_2
+		ModelUseColliderPose true
+	}
+	{
+		WheelColliderPath Tires/Tire_3
+		IsColliderSteered false
+		IsColliderPowered false
+		ModelPath Wheels/Wheel_3
+		ModelUseColliderPose true
+	}
+]
+
+ReverseGearRatio 9.5
+ForwardGearRatios
+[
+	13.2
+]
+GearShift_Duration 0.2
+GearShift_Interval 0.5
+EngineIdleRPM 1000
+EngineMaxRPM 6000
+EngineMaxTorque 2.7
+
+EngineSound_Type EngineRPMSimple
+EngineSound
+{
+	IdlePitch 1.0
+	IdleVolume 0.75
+	MaxPitch 2
+	MaxVolume 1.0
+}

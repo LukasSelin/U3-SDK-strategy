@@ -36,6 +36,8 @@
 # No vanilla content is kept in here.
 # Useful for testing community-submitted content without accidentally committing to source control.
 /Builds/Shared/Sandbox/*
+# Except content used by the editor play test (Docs/PlayTest.md).
+!/Builds/Shared/Sandbox/PlayTest/
 
 # Only include vanilla maps. Useful for testing community-submitted content without accidentally committing to source control.
 /Builds/Shared/Maps/*
