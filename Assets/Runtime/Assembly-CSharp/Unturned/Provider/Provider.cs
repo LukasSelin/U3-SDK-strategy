@@ -2051,7 +2051,8 @@ namespace SDG.Unturned
 			resetChannels();
 
 			Dedicator.serverVisibility = ESteamServerVisibility.LAN;
-			Dedicator.serverID = "Singleplayer_" + Characters.selected;
+			// Play tests use their own throwaway save rather than the selected character's world.
+			Dedicator.serverID = PlayTestSession.ConsumeIsStarting() ? PlayTestSession.SERVER_ID : "Singleplayer_" + Characters.selected;
 
 			Commander.init();
 

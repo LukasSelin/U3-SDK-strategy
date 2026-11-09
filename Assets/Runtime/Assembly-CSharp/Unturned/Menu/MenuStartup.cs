@@ -31,7 +31,11 @@ namespace SDG.Unturned
 			{
 				didAlreadyAutoLoad = true;
 				string autoLoadLevel = EditorPrefs.GetString("AutoLoadLevel");
-				if (!string.IsNullOrEmpty(autoLoadLevel))
+				if (PlayTestSession.TryStartFromEditorRequest())
+				{
+					// Play test requested by Window > Unturned > Play Test takes priority over auto load.
+				}
+				else if (!string.IsNullOrEmpty(autoLoadLevel))
 				{
 					int autoLoadMode = EditorPrefs.GetInt("AutoLoadMode");
 					if (autoLoadMode == 0)
