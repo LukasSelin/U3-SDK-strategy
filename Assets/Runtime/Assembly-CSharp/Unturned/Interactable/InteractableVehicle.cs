@@ -2232,7 +2232,7 @@ namespace SDG.Unturned
 				for (int step = 0; step < drops; step++)
 				{
 					float angle = Random.Range(0, Mathf.PI * 2);
-					ushort id = SpawnTableTool.ResolveLegacyId(asset.dropsTableId, EAssetType.ITEM, OnGetDropsSpawnTableErrorContext);
+					ushort id = SpawnTableTool.ResolveLootLegacyId(asset.dropsTableId, OnGetDropsSpawnTableErrorContext);
 					if (id == 0)
 						continue;
 

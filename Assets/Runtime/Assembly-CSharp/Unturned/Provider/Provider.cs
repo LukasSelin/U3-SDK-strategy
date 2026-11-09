@@ -4851,6 +4851,7 @@ namespace SDG.Unturned
 				writer.WriteFloat(modeConfigData.Gameplay.Min_Fishing_Bite_Interval);
 				writer.WriteFloat(modeConfigData.Gameplay.Max_Fishing_Bite_Interval);
 				writer.WriteFloat(modeConfigData.Gameplay.Fishing_MaxStrength_Bite_Interval_Multiplier);
+				writer.WriteBit(modeConfigData.Items.Allow_Explosive_Crafting);
 			});
 
 			// Per-player info on the server list's details window.

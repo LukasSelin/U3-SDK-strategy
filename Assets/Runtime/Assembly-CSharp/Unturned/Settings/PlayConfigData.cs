@@ -591,10 +591,28 @@ namespace SDG.Unturned
 		/// </summary>
 		public bool Weapons_Have_Durability;
 
+		/// <summary>
+		/// Percentage [0 to 1] chance to keep an explosive (charge, or explosive throwable, trap, magazine or
+		/// consumeable) rolled as loot: item spawns, zombie drops, airdrops, horde beacons, vehicle wrecks and map
+		/// objects. Otherwise the spawn table is rolled again. 0 removes explosives from loot, 1 is vanilla.
+		/// Quest rewards, vendors and spawn loadouts are not affected.
+		/// </summary>
+		public float Explosive_Loot_Chance;
+
+		/// <summary>
+		/// If false, blueprints that produce an explosive (charge, or explosive throwable, trap, magazine or
+		/// consumeable) can't be crafted.
+		/// </summary>
+		public bool Allow_Explosive_Crafting;
+
 		public ItemsConfigData(EGameMode mode)
 		{
 			Despawn_Dropped_Time = 600.0f;
 			Despawn_Natural_Time = 900.0f;
+
+			// Hordes are the siege weapon, so explosives don't drop or get crafted. Vanilla is 1.0 and true.
+			Explosive_Loot_Chance = 0.0f;
+			Allow_Explosive_Crafting = false;
 
 			switch (mode)
 			{
@@ -1327,6 +1345,13 @@ namespace SDG.Unturned
 		public float Melee_Repair_Multiplier;
 
 		/// <summary>
+		/// Scales the amount of damage taken by barricades from explosions (grenades, rockets, charges, explosive
+		/// traps, vehicle explosions). Zombie attacks are not affected.
+		/// For example, 0.5 halves the amount of damage dealt to barricades by explosions.
+		/// </summary>
+		public float Explosion_Damage_Multiplier;
+
+		/// <summary>
 		/// Should players be allowed to build on their vehicles?
 		/// </summary>
 		public bool Allow_Item_Placement_On_Vehicle;
@@ -1365,10 +1390,12 @@ namespace SDG.Unturned
 
 			Armor_Lowtier_Multiplier = 1.0f;
 			Armor_Hightier_Multiplier = 0.5f;
-			Gun_Lowcal_Damage_Multiplier = 1.0f;
-			Gun_Highcal_Damage_Multiplier = 1.0f;
-			Melee_Damage_Multiplier = 1.0f;
+			// Hordes are the siege weapon: players barely scratch buildings, zombies keep full damage. Vanilla is 1.0.
+			Gun_Lowcal_Damage_Multiplier = 0.1f;
+			Gun_Highcal_Damage_Multiplier = 0.1f;
+			Melee_Damage_Multiplier = 0.1f;
 			Melee_Repair_Multiplier = 1.0f;
+			Explosion_Damage_Multiplier = 0.1f;
 
 			Allow_Item_Placement_On_Vehicle = true;
 			Allow_Trap_Placement_On_Vehicle = true;
@@ -1421,6 +1448,13 @@ namespace SDG.Unturned
 		/// </summary>
 		public float Melee_Repair_Multiplier;
 
+		/// <summary>
+		/// Scales the amount of damage taken by structures from explosions (grenades, rockets, charges, explosive
+		/// traps, vehicle explosions). Zombie attacks are not affected.
+		/// For example, 0.5 halves the amount of damage dealt to structures by explosions.
+		/// </summary>
+		public float Explosion_Damage_Multiplier;
+
 		public float getArmorMultiplier(EArmorTier armorTier)
 		{
 			switch (armorTier)
@@ -1440,10 +1474,12 @@ namespace SDG.Unturned
 
 			Armor_Lowtier_Multiplier = 1.0f;
 			Armor_Hightier_Multiplier = 0.5f;
-			Gun_Lowcal_Damage_Multiplier = 1.0f;
-			Gun_Highcal_Damage_Multiplier = 1.0f;
-			Melee_Damage_Multiplier = 1.0f;
+			// Hordes are the siege weapon: players barely scratch buildings, zombies keep full damage. Vanilla is 1.0.
+			Gun_Lowcal_Damage_Multiplier = 0.1f;
+			Gun_Highcal_Damage_Multiplier = 0.1f;
+			Melee_Damage_Multiplier = 0.1f;
 			Melee_Repair_Multiplier = 1.0f;
+			Explosion_Damage_Multiplier = 0.1f;
 		}
 	}
 

@@ -197,6 +197,12 @@ namespace SDG.Unturned
 
 		public bool isBlueprintBlacklisted(Blueprint blueprint)
 		{
+			// Replicated to clients, so the crafting menu hides these too.
+			if (Provider.modeConfigData != null && !Provider.modeConfigData.Items.Allow_Explosive_Crafting && ExplosiveItemTool.DoesBlueprintProduceExplosive(blueprint))
+			{
+				return true;
+			}
+
 			LevelAsset levelAsset = Level.getAsset();
 			return levelAsset != null && levelAsset.isBlueprintBlacklisted(blueprint);
 		}

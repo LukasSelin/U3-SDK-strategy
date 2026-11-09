@@ -247,7 +247,7 @@ namespace SDG.Unturned
 
 			for (int drop = 0; drop < rewardItemDropsCount; drop++)
 			{
-				ushort id = SpawnTableTool.ResolveLegacyId(asset.rewardID, EAssetType.ITEM, OnGetRewardErrorContext);
+				ushort id = SpawnTableTool.ResolveLootLegacyId(asset.rewardID, OnGetRewardErrorContext);
 
 				if (id != 0)
 				{

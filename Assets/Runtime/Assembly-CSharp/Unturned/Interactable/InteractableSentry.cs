@@ -659,7 +659,10 @@ namespace SDG.Unturned
 												ItemBarricadeAsset asset = barricade.asset;
 												if (asset != null && asset.canBeDamaged && (asset.isVulnerable || ((ItemWeaponAsset) displayAsset).isInvulnerable))
 												{
-													DamageTool.damage(info.transform, false, ((ItemGunAsset) displayAsset).barricadeDamage, bulletDamageMultiplier, out kill, damageOrigin: EDamageOrigin.Sentry);
+													// Same gun multipliers as a player shooting, so a sentry can't be used to get around them.
+													bool isHighcal = ((ItemWeaponAsset) displayAsset).isInvulnerable;
+													float barricadeDmgMp = isHighcal ? Provider.modeConfigData.Barricades.Gun_Highcal_Damage_Multiplier : Provider.modeConfigData.Barricades.Gun_Lowcal_Damage_Multiplier;
+													DamageTool.damage(info.transform, false, ((ItemGunAsset) displayAsset).barricadeDamage, bulletDamageMultiplier * barricadeDmgMp, out kill, damageOrigin: EDamageOrigin.Sentry);
 												}
 											}
 										}
@@ -671,7 +674,10 @@ namespace SDG.Unturned
 												ItemStructureAsset asset = structure.asset;
 												if (asset != null && asset.canBeDamaged && (asset.isVulnerable || ((ItemWeaponAsset) displayAsset).isInvulnerable))
 												{
-													DamageTool.damage(info.transform, false, info.direction * Mathf.Ceil(attachments.magazineAsset.pellets / 2f), ((ItemGunAsset) displayAsset).structureDamage, bulletDamageMultiplier, out kill, damageOrigin: EDamageOrigin.Sentry);
+													// Same gun multipliers as a player shooting, so a sentry can't be used to get around them.
+													bool isHighcal = ((ItemWeaponAsset) displayAsset).isInvulnerable;
+													float structureDmgMp = isHighcal ? Provider.modeConfigData.Structures.Gun_Highcal_Damage_Multiplier : Provider.modeConfigData.Structures.Gun_Lowcal_Damage_Multiplier;
+													DamageTool.damage(info.transform, false, info.direction * Mathf.Ceil(attachments.magazineAsset.pellets / 2f), ((ItemGunAsset) displayAsset).structureDamage, bulletDamageMultiplier * structureDmgMp, out kill, damageOrigin: EDamageOrigin.Sentry);
 												}
 											}
 										}

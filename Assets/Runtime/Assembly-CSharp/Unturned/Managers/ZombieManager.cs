@@ -798,7 +798,7 @@ namespace SDG.Unturned
 				{
 					for (int drop = 0; drop < drops; drop++)
 					{
-						ushort id = SpawnTableTool.ResolveLegacyId(LevelZombies.tables[zombie.type].lootID, EAssetType.ITEM, OnGetZombieLootSpawnTableErrorContext);
+						ushort id = SpawnTableTool.ResolveLootLegacyId(LevelZombies.tables[zombie.type].lootID, OnGetZombieLootSpawnTableErrorContext);
 
 						if (id != 0)
 						{

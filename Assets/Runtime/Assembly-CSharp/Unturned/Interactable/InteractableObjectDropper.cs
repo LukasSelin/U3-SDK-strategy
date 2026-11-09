@@ -64,7 +64,7 @@ namespace SDG.Unturned
 			{
 				if (interactabilityRewardID != 0)
 				{
-					ushort id = SpawnTableTool.ResolveLegacyId(interactabilityRewardID, EAssetType.ITEM, OnGetDropSpawnTableErrorContext);
+					ushort id = SpawnTableTool.ResolveLootLegacyId(interactabilityRewardID, OnGetDropSpawnTableErrorContext);
 
 					if (id != 0)
 					{

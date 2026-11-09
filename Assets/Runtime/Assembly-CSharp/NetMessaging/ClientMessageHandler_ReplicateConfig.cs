@@ -78,6 +78,7 @@ namespace SDG.Unturned
 			reader.ReadFloat(out Provider._modeConfigData.Gameplay.Min_Fishing_Bite_Interval);
 			reader.ReadFloat(out Provider._modeConfigData.Gameplay.Max_Fishing_Bite_Interval);
 			reader.ReadFloat(out Provider._modeConfigData.Gameplay.Fishing_MaxStrength_Bite_Interval_Multiplier);
+			reader.ReadBit(out Provider._modeConfigData.Items.Allow_Explosive_Crafting);
 		}
 	}
 }

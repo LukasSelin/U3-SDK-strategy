@@ -120,7 +120,7 @@ namespace SDG.Unturned
 							int attempts = 0;
 							while (attempts < 8)
 							{
-								ushort spawn = SpawnTableTool.ResolveLegacyId(cargoSpawnTable, EAssetType.ITEM, OnGetSpawnTableErrorContext);
+								ushort spawn = SpawnTableTool.ResolveLootLegacyId(cargoSpawnTable, OnGetSpawnTableErrorContext);
 
 								if (spawn == 0)
 								{
