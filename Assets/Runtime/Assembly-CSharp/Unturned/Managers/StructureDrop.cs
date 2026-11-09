@@ -65,8 +65,15 @@ namespace SDG.Unturned
 				}
 			}
 
+			float times = 1.0f - (range / explosionParameters.damageRadius);
+			if (explosionParameters.damageType == EExplosionDamageType.CONVENTIONAL)
+			{
+				// Zombie explosions (spark, stomp, fire, acid) use the other damage types and keep full damage.
+				times *= Provider.modeConfigData.Structures.Explosion_Damage_Multiplier;
+			}
+
 			StructureManager.damage(transform, normal,
-				explosionParameters.structureDamage, 1.0f - (range / explosionParameters.damageRadius), true,
+				explosionParameters.structureDamage, times, true,
 				instigatorSteamID: explosionParameters.killer, damageOrigin: explosionParameters.damageOrigin);
 		}
 		#endregion IExplosionDamageable

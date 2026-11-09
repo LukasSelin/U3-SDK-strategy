@@ -194,6 +194,63 @@ namespace SDG.Unturned
 			return resultAsset?.id ?? 0;
 		}
 
+		/// <summary>
+		/// How many times to roll the table again after rejecting an explosive before giving up and spawning nothing.
+		/// </summary>
+		internal const int MAX_EXPLOSIVE_LOOT_REROLLS = 8;
+
+		/// <summary>
+		/// Resolve an item for world loot (item spawns, zombie drops, airdrops, horde beacons, vehicle wrecks, map
+		/// objects). Same as Resolve, except explosives are kept only with Items.Explosive_Loot_Chance, otherwise the
+		/// table is rolled again. Returns null if every roll was a rejected explosive.
+		/// </summary>
+		public static Asset ResolveLoot(SpawnAsset spawnAsset, System.Func<string> errorContextCallback)
+		{
+			for (int roll = 0; roll <= MAX_EXPLOSIVE_LOOT_REROLLS; ++roll)
+			{
+				Asset asset = Resolve(spawnAsset, EAssetType.ITEM, errorContextCallback);
+				if (!ShouldRerollLoot(asset))
+				{
+					return asset;
+				}
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// Loot version of ResolveLegacyId. See ResolveLoot.
+		/// </summary>
+		public static ushort ResolveLootLegacyId(SpawnAsset spawnAsset, System.Func<string> errorContextCallback)
+		{
+			return ResolveLoot(spawnAsset, errorContextCallback)?.id ?? 0;
+		}
+
+		/// <summary>
+		/// Loot version of ResolveLegacyId. See ResolveLoot.
+		/// </summary>
+		public static ushort ResolveLootLegacyId(ushort spawnAssetLegacyId, System.Func<string> errorContextCallback)
+		{
+			for (int roll = 0; roll <= MAX_EXPLOSIVE_LOOT_REROLLS; ++roll)
+			{
+				Asset asset = Resolve(spawnAssetLegacyId, EAssetType.ITEM, errorContextCallback);
+				if (!ShouldRerollLoot(asset))
+				{
+					return asset?.id ?? 0;
+				}
+			}
+
+			return 0;
+		}
+
+		/// <summary>
+		/// True if the asset is an explosive that lost the Items.Explosive_Loot_Chance roll.
+		/// </summary>
+		internal static bool ShouldRerollLoot(Asset asset)
+		{
+			return asset is ItemAsset itemAsset && ExplosiveItemTool.IsExplosive(itemAsset) && !ExplosiveItemTool.ShouldKeepExplosiveLoot();
+		}
+
 		[System.Obsolete("Please update to the newer Resolve methods with legacyTargetAssetType parameter which support GUIDs")]
 		public static ushort resolve(ushort id)
 		{

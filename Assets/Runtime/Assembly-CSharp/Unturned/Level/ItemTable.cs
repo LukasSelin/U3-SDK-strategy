@@ -92,7 +92,24 @@ namespace SDG.Unturned
 			tiers[tierIndex].removeItem(itemIndex);
 		}
 
+		/// <summary>
+		/// Rolls world loot. Explosives are kept only with Items.Explosive_Loot_Chance, see SpawnTableTool.ResolveLoot.
+		/// </summary>
 		public ushort getItem()
+		{
+			for (int roll = 0; roll <= SpawnTableTool.MAX_EXPLOSIVE_LOOT_REROLLS; ++roll)
+			{
+				ushort id = rollItem();
+				if (id == 0 || !SpawnTableTool.ShouldRerollLoot(Assets.find(EAssetType.ITEM, id)))
+				{
+					return id;
+				}
+			}
+
+			return 0;
+		}
+
+		private ushort rollItem()
 		{
 			if (tableID != 0)
 			{

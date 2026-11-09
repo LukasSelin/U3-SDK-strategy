@@ -392,7 +392,7 @@ namespace SDG.Unturned
 						numDrops = Mathf.Clamp(numDrops, 0, 100);
 						for (int dropIndex = 0; dropIndex < numDrops; dropIndex++)
 						{
-							ushort itemId = SpawnTableTool.ResolveLegacyId(asset.rubbleRewardID, EAssetType.ITEM, OnGetSpawnTableErrorContext);
+							ushort itemId = SpawnTableTool.ResolveLootLegacyId(asset.rubbleRewardID, OnGetSpawnTableErrorContext);
 							if (itemId == 0)
 								continue;
 

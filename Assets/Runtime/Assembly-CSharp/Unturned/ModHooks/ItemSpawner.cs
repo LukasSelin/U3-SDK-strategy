@@ -58,7 +58,7 @@ namespace SDG.Unturned
 
 			if (asset is SpawnAsset spawnAsset)
 			{
-				asset = SpawnTableTool.Resolve(spawnAsset, EAssetType.ITEM, OnGetSpawnErrorContext);
+				asset = SpawnTableTool.ResolveLoot(spawnAsset, OnGetSpawnErrorContext);
 				if (asset == null)
 				{
 					// Allow spawn table to not spawn something.
